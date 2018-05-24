@@ -104,6 +104,8 @@ return cartridge_urls;
         stringParam('FOLDER_DESCRIPTION', '', 'Description of the folder where the cartridge is loaded.')
         booleanParam('ENABLE_CODE_REVIEW', false, 'Enables Code Reviewing for the selected cartridge')
         booleanParam('OVERWRITE_REPOS', false, 'If ticked, existing code repositories (previously loaded by the cartridge) will be overwritten. For first time cartridge runs, this property is redundant and will perform the same behavior regardless.')
+		stringParam('BRANCH_NAME', '', 'Name of the branch to load cartridges from.')
+		
     }
     environmentVariables {
         groovy("return [SCM_KEY: org.apache.commons.lang.RandomStringUtils.randomAlphanumeric(20)]")
@@ -224,9 +226,9 @@ echo "INFO: cloning ${CARTRIDGE_CLONE_URL}"
 set +x
 if ( [ ${CARTRIDGE_CLONE_URL%://*} == "https" ] ||  [ ${CARTRIDGE_CLONE_URL%://*} == "http" ] ) && [ -f ${WORKSPACE}/${SCM_KEY} ]; then
 	source ${WORKSPACE}/${SCM_KEY}
-	git clone ${CARTRIDGE_CLONE_URL%://*}://${SCM_USERNAME}:${SCM_PASSWORD}@${CARTRIDGE_CLONE_URL#*://} cartridge
+	git clone -b ${BRANCH_NAME} ${CARTRIDGE_CLONE_URL%://*}://${SCM_USERNAME}:${SCM_PASSWORD}@${CARTRIDGE_CLONE_URL#*://} cartridge
 else
-    git clone ${CARTRIDGE_CLONE_URL} cartridge
+    git clone -b ${BRANCH_NAME} ${CARTRIDGE_CLONE_URL} cartridge
 fi
 set -x
 
@@ -472,7 +474,7 @@ loadCartridgeCollectionJob.with{
         println("Loading cartridge inside folder: " + cartridge.folder)
         println("Cartridge URL: " + cartridge.url)
 
-        build job: projectWorkspace+'/Cartridge_Management/Load_Cartridge', parameters: [[$class: 'StringParameterValue', name: 'CARTRIDGE_FOLDER', value: cartridge.folder], [$class: 'StringParameterValue', name: 'FOLDER_DISPLAY_NAME', value: cartridge.display_name], [$class: 'StringParameterValue', name: 'FOLDER_DESCRIPTION', value: cartridge.desc], [$class: 'StringParameterValue', name: 'CARTRIDGE_CLONE_URL', value: cartridge.url]]
+        build job: projectWorkspace+'/Cartridge_Management/Load_Cartridge', parameters: [[$class: 'StringParameterValue', name: 'CARTRIDGE_FOLDER', value: cartridge.folder], [$class: 'StringParameterValue', name: 'FOLDER_DISPLAY_NAME', value: cartridge.display_name], [$class: 'StringParameterValue', name: 'FOLDER_DESCRIPTION', value: cartridge.desc], [$class: 'StringParameterValue', name: 'CARTRIDGE_CLONE_URL', value: cartridge.url], [$class: 'StringParameterValue', name: 'BRANCH_NAME', value: cartridge.branch]]
     }
 
 }
@@ -489,12 +491,14 @@ loadCartridgeCollectionJob.with{
         String desc = data.cartridges[i].folder.description
         String folder = data.cartridges[i].folder.name
         String display_name = data.cartridges[i].folder.display_name
+		String branch = data.cartridges[i].cartridge.branch
 
         cartridges[i] = [
             'url' : url,
             'desc' : desc,
             'folder' : folder,
             'display_name' : display_name
+			'branch' : branch
         ]
     }
 
